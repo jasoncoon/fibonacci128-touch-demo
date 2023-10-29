@@ -34,7 +34,7 @@ FASTLED_USING_NAMESPACE
 
 CRGB leds[NUM_LEDS];
 
-uint8_t brightness = 24;
+uint8_t brightness = 32;
 
 Adafruit_FreeTouch touch0 = Adafruit_FreeTouch(A3, OVERSAMPLE_4, RESISTOR_0, FREQ_MODE_NONE);
 Adafruit_FreeTouch touch1 = Adafruit_FreeTouch(A6, OVERSAMPLE_4, RESISTOR_0, FREQ_MODE_NONE);
@@ -124,7 +124,8 @@ void loop() {
   }
 
   if (!activeWaves){
-    colorWavesFibonacci();
+    // colorWavesFibonacci();
+    prideFibonacci();
     // colorTest();
     // horizontalRainbow();
     // verticalRainbow();
@@ -365,6 +366,63 @@ void fillWithColorWaves(CRGB* ledarray, uint16_t numleds, CRGBPalette16& palette
 
 void colorWavesFibonacci() {
   fillWithColorWaves(leds, NUM_LEDS, gCurrentPalette, true);
+}
+
+// Pride2015 by Mark Kriegsman: https://gist.github.com/kriegsman/964de772d64c502760e5
+// This function draws rainbows with an ever-changing,
+// widely-varying set of parameters.
+void fillWithPride(bool useFibonacciOrder)
+{
+  static uint16_t sPseudotime = 0;
+  static uint16_t sLastMillis = 0;
+  static uint16_t sHue16 = 0;
+
+  // uint8_t sat8 = beatsin88( 87, 220, 250);
+  uint8_t sat8 = beatsin88( 43.5, 220, 250);
+  // uint8_t brightdepth = beatsin88( 341, 96, 224);
+  uint8_t brightdepth = beatsin88(171, 96, 224);
+  // uint16_t brightnessthetainc16 = beatsin88( 203, (25 * 256), (40 * 256));
+  uint16_t brightnessthetainc16 = beatsin88( 102, (25 * 256), (40 * 256));
+  // uint8_t msmultiplier = beatsin88(147, 23, 60);
+  uint8_t msmultiplier = beatsin88(74, 23, 60);
+
+  uint16_t hue16 = sHue16;//gHue * 256;
+  // uint16_t hueinc16 = beatsin88(113, 1, 3000);
+  uint16_t hueinc16 = beatsin88(57, 1, 128);
+
+  uint16_t ms = millis();
+  uint16_t deltams = ms - sLastMillis ;
+  sLastMillis  = ms;
+  sPseudotime += deltams * msmultiplier;
+  // sHue16 += deltams * beatsin88( 400, 5, 9);
+  sHue16 += deltams * beatsin88( 200, 5, 9);
+  uint16_t brightnesstheta16 = sPseudotime;
+
+  for ( uint16_t i = 0 ; i < NUM_LEDS; i++) {
+    hue16 += hueinc16;
+    uint8_t hue8 = hue16 / 256;
+
+    brightnesstheta16  += brightnessthetainc16;
+    uint16_t b16 = sin16( brightnesstheta16  ) + 32768;
+
+    uint16_t bri16 = (uint32_t)((uint32_t)b16 * (uint32_t)b16) / 65536;
+    uint8_t bri8 = (uint32_t)(((uint32_t)bri16) * brightdepth) / 65536;
+    bri8 += (255 - brightdepth);
+
+    CRGB newcolor = CHSV( hue8, sat8, bri8);
+
+    uint16_t pixelnumber = i;
+
+    if (useFibonacciOrder) pixelnumber = fibonacciToPhysical[i];
+
+    pixelnumber = (NUM_LEDS - 1) - pixelnumber;
+
+    nblend( leds[pixelnumber], newcolor, 64);
+  }
+}
+
+void prideFibonacci() {
+  fillWithPride(true);
 }
 
 void colorTest() {
