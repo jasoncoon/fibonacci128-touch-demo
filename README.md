@@ -1,10 +1,10 @@
 # Fibonacci128 Touch Demo
 
-Demo Arduino firmware for Fibonacci128 Pico with touch pads
+Demo Arduino firmware for One Inch Fibonacci128 with touch pads
 
-More info: [Fibonacci128 Pico](https://evilgeniuslabs.org/fibonacci128pico)
+More info: [One Inch Fibonacci128](https://www.evilgeniuslabs.org/one-inch-fibonacci128)
 
-![Fibonacci128 Micro](f128p.jpg)
+![One Inch Fibonacci128](1if128.png)
 
 ### Dependencies
 
