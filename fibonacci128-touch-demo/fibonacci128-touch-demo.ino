@@ -22,9 +22,9 @@
 
 FASTLED_USING_NAMESPACE
 
-#define DATA_PIN      A9
+#define DATA_PIN      A10
 #define LED_TYPE      WS2812B
-#define COLOR_ORDER   RGB
+#define COLOR_ORDER   GRB
 #define NUM_LEDS      128
 
 #include "Map.h"
@@ -34,32 +34,31 @@ FASTLED_USING_NAMESPACE
 
 CRGB leds[NUM_LEDS];
 
-uint8_t brightness = 32;
+uint8_t brightness = 24;
 
-Adafruit_FreeTouch touch0 = Adafruit_FreeTouch(A0, OVERSAMPLE_4, RESISTOR_0, FREQ_MODE_NONE);
-Adafruit_FreeTouch touch1 = Adafruit_FreeTouch(A1, OVERSAMPLE_4, RESISTOR_0, FREQ_MODE_NONE);
-Adafruit_FreeTouch touch2 = Adafruit_FreeTouch(A2, OVERSAMPLE_4, RESISTOR_0, FREQ_MODE_NONE);
-Adafruit_FreeTouch touch3 = Adafruit_FreeTouch(A3, OVERSAMPLE_4, RESISTOR_0, FREQ_MODE_NONE);
+Adafruit_FreeTouch touch0 = Adafruit_FreeTouch(A3, OVERSAMPLE_4, RESISTOR_0, FREQ_MODE_NONE);
+Adafruit_FreeTouch touch1 = Adafruit_FreeTouch(A6, OVERSAMPLE_4, RESISTOR_0, FREQ_MODE_NONE);
+Adafruit_FreeTouch touch2 = Adafruit_FreeTouch(A7, OVERSAMPLE_4, RESISTOR_0, FREQ_MODE_NONE);
 
-#define touchPointCount 4
+#define touchPointCount 3
 
 // These values were discovered using the commented-out Serial.print statements in handleTouch below
 
 // minimum values for each touch pad, used to filter out noise
-uint16_t touchMin[touchPointCount] = { 558, 259, 418, 368 };
+uint16_t touchMin[touchPointCount] = { 428, 224, 190 };
 
 // maximum values for each touch pad, used to determine when a pad is touched
-uint16_t touchMax[touchPointCount] = { 1016, 1016, 1016, 1016 };
+uint16_t touchMax[touchPointCount] = { 1016, 1016, 1016 };
 
 // raw capacitive touch sensor readings
-uint16_t touchRaw[touchPointCount] = { 0, 0, 0, 0 };
+uint16_t touchRaw[touchPointCount] = { 0, 0, 0 };
 
 // capacitive touch sensor readings, mapped/scaled one one byte each (0-255)
-uint8_t touch[touchPointCount] = { 0, 0, 0, 0 };
+uint8_t touch[touchPointCount] = { 0, 0, 0 };
 
 // coordinates of the touch points
-uint8_t touchPointX[touchPointCount] = { 255, 0, 0, 255 };
-uint8_t touchPointY[touchPointCount] = { 255, 255, 0, 0 };
+uint8_t touchPointX[touchPointCount] = {  12, 108, 249 };
+uint8_t touchPointY[touchPointCount] = {  74, 253,  88 };
 
 boolean activeWaves = false;
 
@@ -76,18 +75,18 @@ CRGBPalette16 gTargetPalette( gGradientPalettes[0] );
 // 20-120 is better for deployment
 uint8_t secondsPerPalette = 10;
 
+static uint8_t hue = 0;
+
 void setup() {
   Serial.begin(115200);
   //  delay(3000);
 
   if (!touch0.begin())
-    Serial.println("Failed to begin qt on pin A0");
-  if (!touch1.begin())
-    Serial.println("Failed to begin qt on pin A1");
-  if (!touch2.begin())
-    Serial.println("Failed to begin qt on pin A2");
-  if (!touch3.begin())
     Serial.println("Failed to begin qt on pin A3");
+  if (!touch1.begin())
+    Serial.println("Failed to begin qt on pin A6");
+  if (!touch2.begin())
+    Serial.println("Failed to begin qt on pin A7");
 
   FastLED.addLeds<LED_TYPE, DATA_PIN, COLOR_ORDER>(leds, NUM_LEDS);
   FastLED.setDither(false);
@@ -120,8 +119,19 @@ void loop() {
     // offset++;
   }
 
-  if (!activeWaves)
+  EVERY_N_MILLIS(30) {
+    hue++;
+  }
+
+  if (!activeWaves){
     colorWavesFibonacci();
+    // colorTest();
+    // horizontalRainbow();
+    // verticalRainbow();
+    // diagonalRainbow();
+    // outwardRainbow();
+    // rotatingRainbow();
+  }
 
   touchDemo();
 
@@ -136,15 +146,14 @@ void loop() {
 bool touchChanged = true;
 
 void handleTouch() {
-  for (uint8_t i = 0; i < 4; i++) {
+  for (uint8_t i = 0; i < touchPointCount; i++) {
     if (i == 0) touchRaw[i] = touch0.measure();
     else if (i == 1) touchRaw[i] = touch1.measure();
     else if (i == 2) touchRaw[i] = touch2.measure();
-    else if (i == 3) touchRaw[i] = touch3.measure();
 
     // // uncomment to display raw touch values in the serial monitor/plotter
-    //    Serial.print(touchRaw[i]);
-    //    Serial.print(" ");
+    // Serial.print(touchRaw[i]);
+    // Serial.print(" ");
 
     if (touchRaw[i] < touchMin[i]) {
       touchMin[i] = touchRaw[i];
@@ -159,12 +168,12 @@ void handleTouch() {
     touch[i] = map(touchRaw[i], touchMin[i], touchMax[i], 0, 255);
 
     // // uncomment to display mapped/scaled touch values in the serial monitor/plotter
-    //    Serial.print(touch[i]);
-    //    Serial.print(" ");
+    // Serial.print(touch[i]);
+    // Serial.print(" ");
   }
 
   // // uncomment to display raw and/or mapped/scaled touch values in the serial monitor/plotter
-  //  Serial.println();
+  // Serial.println();
 
   // uncomment to display raw, scaled, min, max touch values in the serial monitor/plotter
   //  if (touchChanged) {
@@ -262,7 +271,7 @@ void touchDemo() {
 
   for (uint8_t i = 0; i < touchPointCount; i++) {
     // start new waves when there's a new touch
-    if (touch[i] > 127 && radii[i] == 0) {
+    if (touch[i] > 63 && radii[i] == 0) {
       radii[i] = 32;
       waveX[i] = touchPointX[i];
       waveY[i] = touchPointY[i];
@@ -356,4 +365,38 @@ void fillWithColorWaves(CRGB* ledarray, uint16_t numleds, CRGBPalette16& palette
 
 void colorWavesFibonacci() {
   fillWithColorWaves(leds, NUM_LEDS, gCurrentPalette, true);
+}
+
+void colorTest() {
+  fill_solid(leds, NUM_LEDS, CHSV(hue, 255, 255));
+}
+
+void horizontalRainbow() {
+  for (uint16_t i = 0; i < NUM_LEDS; i++) { 
+    leds[i] = CHSV(coordsX[i] + hue, 255, 255);
+  }
+}
+
+void verticalRainbow() {
+  for (uint16_t i = 0; i < NUM_LEDS; i++) { 
+    leds[i] = CHSV(coordsY[i] + hue, 255, 255);
+  }
+}
+
+void diagonalRainbow() {
+  for (uint16_t i = 0; i < NUM_LEDS; i++) { 
+    leds[i] = CHSV(coordsX[i] + coordsY[i] + hue, 255, 255);
+  }
+}
+
+void outwardRainbow() {
+  for (uint16_t i = 0; i < NUM_LEDS; i++) { 
+    leds[i] = CHSV(radius[i] - hue, 255, 255);
+  }
+}
+
+void rotatingRainbow() {
+  for (uint16_t i = 0; i < NUM_LEDS; i++) { 
+    leds[i] = CHSV(angles[i] - hue, 255, 255);
+  }
 }
