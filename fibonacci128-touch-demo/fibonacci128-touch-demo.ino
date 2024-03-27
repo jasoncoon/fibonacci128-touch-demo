@@ -17,48 +17,56 @@
 */
 
 #include <FastLED.h>  // https://github.com/FastLED/FastLED
+#include <Button.h>   // https://github.com/madleech/Button
 #include "Adafruit_FreeTouch.h" //https://github.com/adafruit/Adafruit_FreeTouch
 #include "GradientPalettes.h"
 
 FASTLED_USING_NAMESPACE
 
-#define DATA_PIN      A10
-#define LED_TYPE      WS2812B
-#define COLOR_ORDER   GRB
+#define DATA_PIN      10
+#define CLOCK_PIN     8
+#define LED_TYPE      SK9822
+#define COLOR_ORDER   BGR
 #define NUM_LEDS      128
 
 #include "Map.h"
-
 #define MILLI_AMPS         1400 // IMPORTANT: set the max milli-Amps of your power supply (4A = 4000mA)
 #define FRAMES_PER_SECOND  120
 
+#define ARRAY_SIZE(A) (sizeof(A) / sizeof((A)[0]))
+
 CRGB leds[NUM_LEDS];
 
-uint8_t brightness = 32;
+uint8_t brightnesses[] = { 96, 64, 32, 16 };
+uint8_t currentBrightnessIndex = 1;
 
-Adafruit_FreeTouch touch0 = Adafruit_FreeTouch(A3, OVERSAMPLE_4, RESISTOR_0, FREQ_MODE_NONE);
-Adafruit_FreeTouch touch1 = Adafruit_FreeTouch(A6, OVERSAMPLE_4, RESISTOR_0, FREQ_MODE_NONE);
-Adafruit_FreeTouch touch2 = Adafruit_FreeTouch(A7, OVERSAMPLE_4, RESISTOR_0, FREQ_MODE_NONE);
+Adafruit_FreeTouch touch0 = Adafruit_FreeTouch(A0, OVERSAMPLE_4, RESISTOR_0, FREQ_MODE_NONE);
+Adafruit_FreeTouch touch1 = Adafruit_FreeTouch(A1, OVERSAMPLE_4, RESISTOR_0, FREQ_MODE_NONE);
+Adafruit_FreeTouch touch2 = Adafruit_FreeTouch(A3, OVERSAMPLE_4, RESISTOR_0, FREQ_MODE_NONE);
+Adafruit_FreeTouch touch3 = Adafruit_FreeTouch(A2, OVERSAMPLE_4, RESISTOR_0, FREQ_MODE_NONE);
 
-#define touchPointCount 3
+#define touchPointCount 4
+
+Button button0(5);
+Button button1(4);
 
 // These values were discovered using the commented-out Serial.print statements in handleTouch below
 
 // minimum values for each touch pad, used to filter out noise
-uint16_t touchMin[touchPointCount] = { 428, 224, 190 };
+uint16_t touchMin[touchPointCount] = { 626, 356, 356, 632 };
 
 // maximum values for each touch pad, used to determine when a pad is touched
-uint16_t touchMax[touchPointCount] = { 1016, 1016, 1016 };
+uint16_t touchMax[touchPointCount] = { 1016, 1016, 1016, 1016 };
 
 // raw capacitive touch sensor readings
-uint16_t touchRaw[touchPointCount] = { 0, 0, 0 };
+uint16_t touchRaw[touchPointCount] = { 0, 0, 0, 0 };
 
 // capacitive touch sensor readings, mapped/scaled one one byte each (0-255)
-uint8_t touch[touchPointCount] = { 0, 0, 0 };
+uint8_t touch[touchPointCount] = { 0, 0, 0, 0 };
 
 // coordinates of the touch points
-uint8_t touchPointX[touchPointCount] = {  12, 108, 249 };
-uint8_t touchPointY[touchPointCount] = {  74, 253,  88 };
+uint8_t touchPointX[touchPointCount] = { 228, 29, 29, 228 };
+uint8_t touchPointY[touchPointCount] = { 29, 29, 231, 231 };
 
 boolean activeWaves = false;
 
@@ -77,26 +85,39 @@ uint8_t secondsPerPalette = 10;
 
 static uint8_t hue = 0;
 
+#include "Patterns.h"
+
+typedef void (*SimplePatternList[])();
+SimplePatternList patterns = { colorWavesFibonacci, prideFibonacci, outwardPalettes, colorTest, horizontalRainbow, verticalRainbow, diagonalRainbow, outwardRainbow, rotatingRainbow };
+
+uint8_t currentPatternIndex = 0;
+const uint8_t patternCount = ARRAY_SIZE(patterns);
+
 void setup() {
   Serial.begin(115200);
   //  delay(3000);
 
-  if (!touch0.begin())
-    Serial.println("Failed to begin qt on pin A3");
-  if (!touch1.begin())
-    Serial.println("Failed to begin qt on pin A6");
-  if (!touch2.begin())
-    Serial.println("Failed to begin qt on pin A7");
+  button0.begin();
+  button1.begin();
 
-  FastLED.addLeds<LED_TYPE, DATA_PIN, COLOR_ORDER>(leds, NUM_LEDS);
+  if (!touch0.begin())
+    Serial.println("Failed to begin qt on pin A0");
+  if (!touch1.begin())
+    Serial.println("Failed to begin qt on pin A1");
+  if (!touch2.begin())
+    Serial.println("Failed to begin qt on pin A3");
+  if (!touch3.begin())
+    Serial.println("Failed to begin qt on pin A2");
+
+  FastLED.addLeds<LED_TYPE, DATA_PIN, CLOCK_PIN, COLOR_ORDER>(leds, NUM_LEDS);
   FastLED.setDither(false);
   // FastLED.setCorrection(TypicalSMD5050);
-  FastLED.setBrightness(brightness);
+  FastLED.setBrightness(brightnesses[currentBrightnessIndex]);
   FastLED.setMaxPowerInVoltsAndMilliamps(5, MILLI_AMPS);
   fill_solid(leds, NUM_LEDS, CRGB::Black);
   FastLED.show();
 
-  FastLED.setBrightness(brightness);
+  FastLED.setBrightness(brightnesses[currentBrightnessIndex]);
 }
 
 void loop() {
@@ -104,6 +125,22 @@ void loop() {
   random16_add_entropy(random());
 
   handleTouch();
+
+  if (button0.pressed()) {
+    Serial.println("button 0 pressed");
+    if (currentPatternIndex < patternCount - 1) currentPatternIndex++;
+    else currentPatternIndex = 0;
+    Serial.print("mode: ");
+    Serial.println(currentPatternIndex);
+  }
+
+  if (button1.pressed()) {
+    Serial.println("button 1 pressed");
+    currentBrightnessIndex = (currentBrightnessIndex + 1) % ARRAY_SIZE(brightnesses);
+    FastLED.setBrightness(brightnesses[currentBrightnessIndex]);
+    Serial.print("brightness: ");
+    Serial.println(brightnesses[currentBrightnessIndex]);
+  }
 
   // change to a new cpt-city gradient palette
   EVERY_N_SECONDS( secondsPerPalette ) {
@@ -116,7 +153,6 @@ void loop() {
   EVERY_N_MILLISECONDS(40) {
     // slowly blend the current palette to the next
     nblendPaletteTowardPalette( gCurrentPalette, gTargetPalette, 8);
-    // offset++;
   }
 
   EVERY_N_MILLIS(30) {
@@ -124,14 +160,7 @@ void loop() {
   }
 
   if (!activeWaves){
-    // colorWavesFibonacci();
-    prideFibonacci();
-    // colorTest();
-    // horizontalRainbow();
-    // verticalRainbow();
-    // diagonalRainbow();
-    // outwardRainbow();
-    // rotatingRainbow();
+    patterns[currentPatternIndex]();
   }
 
   touchDemo();
@@ -151,6 +180,7 @@ void handleTouch() {
     if (i == 0) touchRaw[i] = touch0.measure();
     else if (i == 1) touchRaw[i] = touch1.measure();
     else if (i == 2) touchRaw[i] = touch2.measure();
+    else if (i == 3) touchRaw[i] = touch3.measure();
 
     // // uncomment to display raw touch values in the serial monitor/plotter
     // Serial.print(touchRaw[i]);
@@ -305,156 +335,5 @@ void touchDemo() {
 
     // draw waves starting from the corner closest to each touch sensor
     drawCircle(x, y, radii[i], color, 4);
-  }
-}
-
-// ColorWavesWithPalettes by Mark Kriegsman: https://gist.github.com/kriegsman/8281905786e8b2632aeb
-// This function draws color waves with an ever-changing,
-// widely-varying set of parameters, using a color palette.
-void fillWithColorWaves(CRGB* ledarray, uint16_t numleds, CRGBPalette16& palette, bool useFibonacciOrder) {
-  static uint16_t sPseudotime = 0;
-  static uint16_t sLastMillis = 0;
-  static uint16_t sHue16 = 0;
-
-  // uint8_t sat8 = beatsin88( 87, 220, 250);
-  uint8_t brightdepth = beatsin88( 341, 96, 224);
-  uint16_t brightnessthetainc16 = beatsin88( 203, (25 * 256), (40 * 256));
-  uint8_t msmultiplier = beatsin88(147, 23, 60);
-
-  uint16_t hue16 = sHue16;//gHue * 256;
-  uint16_t hueinc16 = beatsin88(113, 300, 1500);
-
-  uint16_t ms = millis();
-  uint16_t deltams = ms - sLastMillis ;
-  sLastMillis  = ms;
-  sPseudotime += deltams * msmultiplier;
-  sHue16 += deltams * beatsin88( 400, 5, 9);
-  uint16_t brightnesstheta16 = sPseudotime;
-
-  for ( uint16_t i = 0 ; i < numleds; i++) {
-    hue16 += hueinc16;
-    uint8_t hue8 = hue16 / 256;
-    uint16_t h16_128 = hue16 >> 7;
-    if ( h16_128 & 0x100) {
-      hue8 = 255 - (h16_128 >> 1);
-    } else {
-      hue8 = h16_128 >> 1;
-    }
-
-    brightnesstheta16 += brightnessthetainc16;
-    uint16_t b16 = sin16( brightnesstheta16  ) + 32768;
-
-    uint16_t bri16 = (uint32_t)((uint32_t)b16 * (uint32_t)b16) / 65536;
-    uint8_t bri8 = (uint32_t)(((uint32_t)bri16) * brightdepth) / 65536;
-    bri8 += (255 - brightdepth);
-
-    uint8_t index = hue8;
-    //index = triwave8( index);
-    index = scale8( index, 240);
-
-    CRGB newcolor = ColorFromPalette( palette, index, bri8);
-
-    uint16_t pixelnumber = i;
-
-    if (useFibonacciOrder) pixelnumber = fibonacciToPhysical[i];
-
-    pixelnumber = (numleds - 1) - pixelnumber;
-
-    nblend(ledarray[pixelnumber], newcolor, 128);
-  }
-}
-
-void colorWavesFibonacci() {
-  fillWithColorWaves(leds, NUM_LEDS, gCurrentPalette, true);
-}
-
-// Pride2015 by Mark Kriegsman: https://gist.github.com/kriegsman/964de772d64c502760e5
-// This function draws rainbows with an ever-changing,
-// widely-varying set of parameters.
-void fillWithPride(bool useFibonacciOrder)
-{
-  static uint16_t sPseudotime = 0;
-  static uint16_t sLastMillis = 0;
-  static uint16_t sHue16 = 0;
-
-  // uint8_t sat8 = beatsin88( 87, 220, 250);
-  uint8_t sat8 = beatsin88( 43.5, 220, 250);
-  // uint8_t brightdepth = beatsin88( 341, 96, 224);
-  uint8_t brightdepth = beatsin88(171, 96, 224);
-  // uint16_t brightnessthetainc16 = beatsin88( 203, (25 * 256), (40 * 256));
-  uint16_t brightnessthetainc16 = beatsin88( 102, (25 * 256), (40 * 256));
-  // uint8_t msmultiplier = beatsin88(147, 23, 60);
-  uint8_t msmultiplier = beatsin88(74, 23, 60);
-
-  uint16_t hue16 = sHue16;//gHue * 256;
-  // uint16_t hueinc16 = beatsin88(113, 1, 3000);
-  uint16_t hueinc16 = beatsin88(57, 1, 128);
-
-  uint16_t ms = millis();
-  uint16_t deltams = ms - sLastMillis ;
-  sLastMillis  = ms;
-  sPseudotime += deltams * msmultiplier;
-  // sHue16 += deltams * beatsin88( 400, 5, 9);
-  sHue16 += deltams * beatsin88( 200, 5, 9);
-  uint16_t brightnesstheta16 = sPseudotime;
-
-  for ( uint16_t i = 0 ; i < NUM_LEDS; i++) {
-    hue16 += hueinc16;
-    uint8_t hue8 = hue16 / 256;
-
-    brightnesstheta16  += brightnessthetainc16;
-    uint16_t b16 = sin16( brightnesstheta16  ) + 32768;
-
-    uint16_t bri16 = (uint32_t)((uint32_t)b16 * (uint32_t)b16) / 65536;
-    uint8_t bri8 = (uint32_t)(((uint32_t)bri16) * brightdepth) / 65536;
-    bri8 += (255 - brightdepth);
-
-    CRGB newcolor = CHSV( hue8, sat8, bri8);
-
-    uint16_t pixelnumber = i;
-
-    if (useFibonacciOrder) pixelnumber = fibonacciToPhysical[i];
-
-    pixelnumber = (NUM_LEDS - 1) - pixelnumber;
-
-    nblend( leds[pixelnumber], newcolor, 64);
-  }
-}
-
-void prideFibonacci() {
-  fillWithPride(true);
-}
-
-void colorTest() {
-  fill_solid(leds, NUM_LEDS, CHSV(hue, 255, 255));
-}
-
-void horizontalRainbow() {
-  for (uint16_t i = 0; i < NUM_LEDS; i++) { 
-    leds[i] = CHSV(coordsX[i] + hue, 255, 255);
-  }
-}
-
-void verticalRainbow() {
-  for (uint16_t i = 0; i < NUM_LEDS; i++) { 
-    leds[i] = CHSV(coordsY[i] + hue, 255, 255);
-  }
-}
-
-void diagonalRainbow() {
-  for (uint16_t i = 0; i < NUM_LEDS; i++) { 
-    leds[i] = CHSV(coordsX[i] + coordsY[i] + hue, 255, 255);
-  }
-}
-
-void outwardRainbow() {
-  for (uint16_t i = 0; i < NUM_LEDS; i++) { 
-    leds[i] = CHSV(radius[i] - hue, 255, 255);
-  }
-}
-
-void rotatingRainbow() {
-  for (uint16_t i = 0; i < NUM_LEDS; i++) { 
-    leds[i] = CHSV(angles[i] - hue, 255, 255);
   }
 }
