@@ -124,8 +124,8 @@ void loop() {
   }
 
   if (!activeWaves){
-    // colorWavesFibonacci();
-    prideFibonacci();
+    colorWavesFibonacci();
+    // prideFibonacci();
     // colorTest();
     // horizontalRainbow();
     // verticalRainbow();
