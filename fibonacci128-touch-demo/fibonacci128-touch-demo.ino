@@ -42,8 +42,8 @@ uint8_t currentBrightnessIndex = 1;
 
 Adafruit_FreeTouch touch0 = Adafruit_FreeTouch(A0, OVERSAMPLE_4, RESISTOR_0, FREQ_MODE_NONE);
 Adafruit_FreeTouch touch1 = Adafruit_FreeTouch(A1, OVERSAMPLE_4, RESISTOR_0, FREQ_MODE_NONE);
-Adafruit_FreeTouch touch2 = Adafruit_FreeTouch(A3, OVERSAMPLE_4, RESISTOR_0, FREQ_MODE_NONE);
-Adafruit_FreeTouch touch3 = Adafruit_FreeTouch(A2, OVERSAMPLE_4, RESISTOR_0, FREQ_MODE_NONE);
+Adafruit_FreeTouch touch2 = Adafruit_FreeTouch(A2, OVERSAMPLE_4, RESISTOR_0, FREQ_MODE_NONE);
+Adafruit_FreeTouch touch3 = Adafruit_FreeTouch(A3, OVERSAMPLE_4, RESISTOR_0, FREQ_MODE_NONE);
 
 #define touchPointCount 4
 
@@ -53,7 +53,7 @@ Button button1(4);
 // These values were discovered using the commented-out Serial.print statements in handleTouch below
 
 // minimum values for each touch pad, used to filter out noise
-uint16_t touchMin[touchPointCount] = { 626, 356, 356, 632 };
+uint16_t touchMin[touchPointCount] = { 604, 339, 544, 430 };
 
 // maximum values for each touch pad, used to determine when a pad is touched
 uint16_t touchMax[touchPointCount] = { 1016, 1016, 1016, 1016 };
@@ -88,7 +88,7 @@ static uint8_t hue = 0;
 #include "Patterns.h"
 
 typedef void (*SimplePatternList[])();
-SimplePatternList patterns = { colorWavesFibonacci, prideFibonacci, outwardPalettes, colorTest, horizontalRainbow, verticalRainbow, diagonalRainbow, outwardRainbow, rotatingRainbow };
+SimplePatternList patterns = { colorWavesFibonacci, prideFibonacci, outwardPalettes, horizontalRainbow, verticalRainbow, diagonalRainbow, outwardRainbow, rotatingRainbow };
 
 uint8_t currentPatternIndex = 0;
 const uint8_t patternCount = ARRAY_SIZE(patterns);
@@ -105,9 +105,9 @@ void setup() {
   if (!touch1.begin())
     Serial.println("Failed to begin qt on pin A1");
   if (!touch2.begin())
-    Serial.println("Failed to begin qt on pin A3");
-  if (!touch3.begin())
     Serial.println("Failed to begin qt on pin A2");
+  if (!touch3.begin())
+    Serial.println("Failed to begin qt on pin A3");
 
   FastLED.addLeds<LED_TYPE, DATA_PIN, CLOCK_PIN, COLOR_ORDER>(leds, NUM_LEDS);
   FastLED.setDither(false);
