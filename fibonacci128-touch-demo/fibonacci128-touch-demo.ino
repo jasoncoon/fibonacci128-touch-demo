@@ -17,7 +17,8 @@
 */
 
 #include <FastLED.h>  // https://github.com/FastLED/FastLED
-#include "Adafruit_FreeTouch.h" //https://github.com/adafruit/Adafruit_FreeTouch
+#include "Adafruit_FreeTouch.h" // https://github.com/adafruit/Adafruit_FreeTouch
+#include <Adafruit_SleepyDog.h> // https://github.com/adafruit/Adafruit_SleepyDog
 #include "GradientPalettes.h"
 
 FASTLED_USING_NAMESPACE
@@ -34,7 +35,7 @@ FASTLED_USING_NAMESPACE
 
 CRGB leds[NUM_LEDS];
 
-uint8_t brightness = 32;
+uint8_t brightness = 8;
 
 Adafruit_FreeTouch touch0 = Adafruit_FreeTouch(A3, OVERSAMPLE_4, RESISTOR_0, FREQ_MODE_NONE);
 Adafruit_FreeTouch touch1 = Adafruit_FreeTouch(A6, OVERSAMPLE_4, RESISTOR_0, FREQ_MODE_NONE);
@@ -77,9 +78,17 @@ uint8_t secondsPerPalette = 10;
 
 static uint8_t hue = 0;
 
+// LiPo: 3.73 (20%) to 4.2 (100%)
+float voltage = 0;
+float voltageMin = 3.8;
+float voltageMax = 4.2;
+
+uint32_t startMillis = 0;
+uint16_t startupDuration = 2000;
+
 void setup() {
   Serial.begin(115200);
-  //  delay(3000);
+  // delay(500);
 
   if (!touch0.begin())
     Serial.println("Failed to begin qt on pin A3");
@@ -93,13 +102,30 @@ void setup() {
   // FastLED.setCorrection(TypicalSMD5050);
   FastLED.setBrightness(brightness);
   FastLED.setMaxPowerInVoltsAndMilliamps(5, MILLI_AMPS);
+
+  // make sure all LEDs are off
   fill_solid(leds, NUM_LEDS, CRGB::Black);
   FastLED.show();
 
-  FastLED.setBrightness(brightness);
+  startMillis = millis();
 }
 
 void loop() {
+  readVoltage();
+  if (voltage < voltageMin) {
+    // turn all LEDs are off
+    fill_solid(leds, NUM_LEDS, CRGB::Black);
+    FastLED.show();
+    Watchdog.sleep(); // enter the lowest power sleep mode possible, for as long as possible
+    return;
+  }
+
+  if (true || (millis() - startMillis < startupDuration)) {
+    voltageMeter();
+    FastLED.delay(1000 / FRAMES_PER_SECOND);
+    return;
+  }
+  
   // Add entropy to random number generator; we use a lot of it.
   random16_add_entropy(random());
 
@@ -116,7 +142,6 @@ void loop() {
   EVERY_N_MILLISECONDS(40) {
     // slowly blend the current palette to the next
     nblendPaletteTowardPalette( gCurrentPalette, gTargetPalette, 8);
-    // offset++;
   }
 
   EVERY_N_MILLIS(30) {
@@ -124,8 +149,8 @@ void loop() {
   }
 
   if (!activeWaves){
-    colorWavesFibonacci();
-    // prideFibonacci();
+    // colorWavesFibonacci();
+    prideFibonacci();
     // colorTest();
     // horizontalRainbow();
     // verticalRainbow();
@@ -135,10 +160,6 @@ void loop() {
   }
 
   touchDemo();
-
-  // for (byte i = 0; i < NUM_LEDS; i++) {
-  //   leds[i] = ColorFromPalette(gCurrentPalette, coordsX[i] + offset);
-  // }
 
   // insert a delay to keep the framerate modest
   FastLED.delay(1000 / FRAMES_PER_SECOND);
@@ -456,5 +477,64 @@ void outwardRainbow() {
 void rotatingRainbow() {
   for (uint16_t i = 0; i < NUM_LEDS; i++) { 
     leds[i] = CHSV(angles[i] - hue, 255, 255);
+  }
+}
+
+void readVoltage() {
+  // LiPo: 4.2 (100%) to 3.73 (20%)
+  voltage = analogRead(A2) * 3.3 * 2.0;
+
+  voltage /= 1000;
+  
+  voltage += .2; // difference actually measured with a voltmeter between voltage applied and voltage read
+
+  // EVERY_N_SECONDS(2) {
+  //   Serial.print("voltage: ");
+  //   Serial.println(voltage);
+  // }
+}
+
+uint8_t maxLitLeds = 0;
+float startupIndicator = 0;
+float huesPerPixel = .75; // red to green
+
+void voltageMeter() {
+  float p = (float)(voltage - voltageMin) / (float)(voltageMax - voltageMin);
+
+  maxLitLeds = p * (NUM_LEDS - 1);
+
+  if (voltage >= voltageMax) maxLitLeds = NUM_LEDS - 1;
+
+  if (startupIndicator < maxLitLeds && startupIndicator < NUM_LEDS) {
+    startupIndicator += 1;
+  }
+
+  startupIndicator = min(startupIndicator, maxLitLeds);
+
+  // EVERY_N_SECONDS(2) {
+  //   Serial.print("voltage: ");
+  //   Serial.println(voltage);
+
+  //   Serial.print("percent: ");
+  //   Serial.println(p);
+
+  //   Serial.print("maxLitLeds: ");
+  //   Serial.println(maxLitLeds);
+
+  //   Serial.print("huesPerPixel: ");
+  //   Serial.println(huesPerPixel);
+
+  //   Serial.print("startupIndicator: ");
+  //   Serial.println(startupIndicator);
+    
+  //   Serial.println();
+  // }
+
+  for (uint16_t i = 0; i < NUM_LEDS; i++) { 
+    if (i <= startupIndicator) {
+      leds[i] = CHSV(i * huesPerPixel, 255, 196);
+    } else {
+      leds[i] = CRGB::Black;
+    }
   }
 }
