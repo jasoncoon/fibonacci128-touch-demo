@@ -120,7 +120,7 @@ void loop() {
     return;
   }
 
-  if (true || (millis() - startMillis < startupDuration)) {
+  if ((millis() - startMillis < startupDuration)) {
     voltageMeter();
     FastLED.delay(1000 / FRAMES_PER_SECOND);
     return;
