@@ -10,7 +10,7 @@ More info: [One Inch Fibonacci128](https://www.evilgeniuslabs.org/one-inch-fibon
 
 1. Connect your 1" Fibonacci128 to a computer with a USB-C cable.
 2. Double-click the button on the back of the 1" F128. The light on the back should turn green, and a `QTPY_BOOT` drive should appear on your computer.
-3. Drag (or copy and paste) the [1f128.uf2](1f128.uf2) file onto the `QTPY_BOOT` drive.
+3. Download and drag (or copy and paste) the [1f128.uf2](1f128.uf2) file onto the `QTPY_BOOT` drive.
 4. You may need to reset the 1" F128 by clicking the button on the back, or disconnect and reconnect the USB cable.
 
 ### Dependencies
