@@ -150,8 +150,6 @@ void loop() {
   FastLED.delay(1000 / FRAMES_PER_SECOND);
 }
 
-const int WRITTEN_SIGNATURE = 0xBEEFDEED;
-
 void readEeprom() {
   Serial.print("EEPROM length: ");
   Serial.println(EEPROM.length());
@@ -162,7 +160,7 @@ void readEeprom() {
   // Read the content of emulated-EEPROM
   EEPROM.get(address, number);
 
-  if (number >= patternCount) number = 0;
+  if (number >= patternCount || number < 0) number = 0;
 
   currentPatternIndex = number;
 
