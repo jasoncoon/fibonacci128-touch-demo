@@ -72,7 +72,7 @@ boolean activeWaves = false;
 
 // Forward declarations of an array of cpt-city gradient palettes, and
 // a count of how many there are.
-extern const TProgmemRGBGradientPalettePtr gGradientPalettes[];
+extern const TProgmemRGBGradientPaletteRef gGradientPalettes[];
 
 uint8_t gCurrentPaletteNumber = 0;
 
@@ -88,7 +88,27 @@ static uint8_t hue = 0;
 #include "Patterns.h"
 
 typedef void (*SimplePatternList[])();
-SimplePatternList patterns = { colorWavesFibonacci, prideFibonacci, outwardPalettes, horizontalRainbow, verticalRainbow, diagonalRainbow, outwardRainbow, rotatingRainbow };
+SimplePatternList patterns = { 
+  colorWavesFibonacci, 
+  prideFibonacci, 
+  outwardPalettes, 
+  outwardRainbow, 
+
+  cube,
+  fibonacciChase,
+  wave,
+  sublimeVerticalFire,
+  sublimeRain,
+
+  flock,
+  attract,
+  incrementalDrift,
+  incrementalDrift2,
+  pendulumWave,
+  spiral,
+  swirl,  
+  electricMandala,
+};
 
 uint8_t currentPatternIndex = 0;
 const uint8_t patternCount = ARRAY_SIZE(patterns);

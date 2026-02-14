@@ -1,3 +1,44 @@
+// --- Pattern Rotation System ---
+// Maximum rotation speed in radians per frame (tune this to taste)
+float patternMaxRotSpeed = 0.05f;
+
+struct PatternRotation {
+  float angle;       // current rotation angle (radians)
+  float phase;       // sine-wave phase for angular velocity oscillation
+  float phaseSpeed;  // how fast the sine wave advances (controls oscillation period)
+  float curMaxSpeed; // current peak angular velocity (randomized within patternMaxRotSpeed)
+  bool initialized;
+
+  void init() {
+    angle = 0;
+    phase = random(0, 628) / 100.0f; // random starting phase 0..2PI
+    randomizeSpeeds();
+    initialized = true;
+  }
+
+  void randomizeSpeeds() {
+    // Phase speed: controls how quickly direction reverses (0.003..0.018 rad/frame)
+    phaseSpeed = 0.003f + random(0, 150) / 10000.0f;
+    // Peak angular velocity: 30-100% of the global max
+    curMaxSpeed = patternMaxRotSpeed * (0.3f + random(0, 70) / 100.0f);
+  }
+
+  // Call once per frame. Returns current angle.
+  float update() {
+    if (!initialized) init();
+    phase += phaseSpeed;
+    if (phase >= TWO_PI) phase -= TWO_PI;
+    float angVel = sinf(phase) * curMaxSpeed;
+    angle += angVel;
+    return angle;
+  }
+};
+
+#include "PatternsAurora.h"
+#include "PatternCube.h"
+#include "PatternFibonacciSpiral.h"
+#include "PatternSublime.h"
+#include "PatternWave.h"
 
 // ColorWavesWithPalettes by Mark Kriegsman: https://gist.github.com/kriegsman/8281905786e8b2632aeb
 // This function draws color waves with an ever-changing,
@@ -116,12 +157,28 @@ void prideFibonacci() {
   fillWithPride(true);
 }
 
-void colorTest() {
-  CRGB colors[] = { CRGB::Red, CRGB::Green, CRGB::Blue, CRGB::White, CRGB::Black };
-  const uint8_t colorCount = ARRAY_SIZE(colors);
-  static uint8_t colorIndex = 0;
-  EVERY_N_SECONDS(2) { colorIndex = (colorIndex + 1) % colorCount; }
-  fill_solid(leds, NUM_LEDS, colors[colorIndex]);
+void outwardPalettes() {
+  for (uint16_t i = 0; i < NUM_LEDS; i++) { 
+    leds[i] = ColorFromPalette(gCurrentPalette, physicalToFibonacci[i] - hue);
+  }
+}
+
+void rotatingPalettes() {
+  for (uint16_t i = 0; i < NUM_LEDS; i++) { 
+    leds[i] = ColorFromPalette(gCurrentPalette, angles[i] - hue);
+  }
+}
+
+void outwardRainbow() {
+  for (uint16_t i = 0; i < NUM_LEDS; i++) { 
+    leds[i] = CHSV(physicalToFibonacci[i] - hue, 255, 255);
+  }
+}
+
+void rotatingRainbow() {
+  for (uint16_t i = 0; i < NUM_LEDS; i++) { 
+    leds[i] = CHSV(angles[i] - hue, 255, 255);
+  }
 }
 
 void horizontalRainbow() {
@@ -142,20 +199,10 @@ void diagonalRainbow() {
   }
 }
 
-void outwardRainbow() {
-  for (uint16_t i = 0; i < NUM_LEDS; i++) { 
-    leds[i] = CHSV(physicalToFibonacci[i] - hue, 255, 255);
-  }
-}
-
-void rotatingRainbow() {
-  for (uint16_t i = 0; i < NUM_LEDS; i++) { 
-    leds[i] = CHSV(angles[i] - hue, 255, 255);
-  }
-}
-
-void outwardPalettes() {
-  for (uint16_t i = 0; i < NUM_LEDS; i++) { 
-    leds[i] = ColorFromPalette(gCurrentPalette, physicalToFibonacci[i] - hue);
-  }
+void colorTest() {
+  CRGB colors[] = { CRGB::Red, CRGB::Green, CRGB::Blue, CRGB::White, CRGB::Black };
+  const uint8_t colorCount = ARRAY_SIZE(colors);
+  static uint8_t colorIndex = 0;
+  EVERY_N_SECONDS(2) { colorIndex = (colorIndex + 1) % colorCount; }
+  fill_solid(leds, NUM_LEDS, colors[colorIndex]);
 }
