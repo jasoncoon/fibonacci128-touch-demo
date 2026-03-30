@@ -94,6 +94,7 @@ SimplePatternList patterns = {
   wave,
   sublimeVerticalFire,
   sublimeRain,
+  phyllotaxisBloomAnimation,
 
   flock,
   attract,
@@ -170,30 +171,70 @@ void loop() {
   FastLED.delay(1000 / FRAMES_PER_SECOND);
 }
 
+// EEPROM wear-leveling for pattern index persistence.
+//
+// Problem: The SAMD21 uses flash-based EEPROM emulation (FlashStorage_SAMD).
+// Each commit() erases and rewrites an entire flash page. SAMD21 flash is rated
+// for ~25K erase cycles (some datasheets say 10K conservative). Writing on every
+// boot would exhaust the flash in months of frequent power-cycling.
+//
+// Solution: Rotate writes across SLOT_COUNT addresses. Each slot holds the
+// pattern index or 0xFF (erased). On boot we scan for the last written slot
+// (the one followed by an empty slot or at the end of the ring). We advance
+// to the next slot and write there. The flash page is only erased once every
+// SLOT_COUNT boots, extending endurance by that factor.
+//
+// With 64 slots and 25K cycles, the device survives ~1.6 million boots.
+
+#define SLOT_COUNT 64  // number of wear-leveling slots (one byte each)
+
 void readEeprom() {
   Serial.print("EEPROM length: ");
   Serial.println(EEPROM.length());
 
-  uint16_t address = 0;
-  int number;
+  // Find the current slot: scan for the last valid entry before an empty (0xFF) slot.
+  // In a freshly erased EEPROM all slots are 0xFF, so currentSlot stays 0 and
+  // we treat the value as invalid (triggering pattern index 0).
+  uint16_t currentSlot = 0;
+  bool foundValid = false;
 
-  // Read the content of emulated-EEPROM
-  EEPROM.get(address, number);
+  for (uint16_t i = 0; i < SLOT_COUNT; i++) {
+    uint8_t val;
+    EEPROM.get(i, val);
+    if (val != 0xFF) {
+      currentSlot = i;
+      foundValid = true;
+    }
+  }
 
-  if (number >= patternCount || number < 0) number = 0;
+  // Read pattern index from current slot
+  uint8_t storedIndex = 0;
+  if (foundValid) {
+    EEPROM.get(currentSlot, storedIndex);
+  }
 
-  currentPatternIndex = number;
+  if (storedIndex >= patternCount) storedIndex = 0;
+  currentPatternIndex = storedIndex;
 
-  // Print the current number on the serial monitor
-  Serial.print("Number = 0x");
-  Serial.println(number, HEX);
+  Serial.print("Slot = ");
+  Serial.print(currentSlot);
+  Serial.print(", Pattern = ");
+  Serial.println(storedIndex);
 
-  // Save into emulated-EEPROM the number increased by 1 for the next run of the sketch
-  EEPROM.put(address, (int) (number + 1));
+  // Compute next pattern and next slot
+  uint8_t nextIndex = (storedIndex + 1) % patternCount;
+  uint16_t nextSlot = (currentSlot + 1) % SLOT_COUNT;
 
-  if (!EEPROM.getCommitASAP())
-  {
-    Serial.println("CommitASAP not set. Need commit()");
+  // If we wrapped around to slot 0, all slots are full — erase them first
+  if (nextSlot == 0) {
+    for (uint16_t i = 0; i < SLOT_COUNT; i++) {
+      EEPROM.put(i, (uint8_t)0xFF);
+    }
+  }
+
+  EEPROM.put(nextSlot, nextIndex);
+
+  if (!EEPROM.getCommitASAP()) {
     EEPROM.commit();
   }
 
