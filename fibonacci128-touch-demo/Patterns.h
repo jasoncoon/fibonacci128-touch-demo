@@ -39,6 +39,7 @@ struct PatternRotation {
 #include "PatternFibonacciSpiral.h"
 #include "PatternSublime.h"
 #include "PatternWave.h"
+#include "PatternPhyllotaxisBloom.h"
 
 // ColorWavesWithPalettes by Mark Kriegsman: https://gist.github.com/kriegsman/8281905786e8b2632aeb
 // This function draws color waves with an ever-changing,

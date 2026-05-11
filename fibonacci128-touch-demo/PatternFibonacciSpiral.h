@@ -23,7 +23,7 @@ void fibonacciSpiral()
   uint8_t arms1 = armPairs[pairIdx][0];
   uint8_t arms2 = armPairs[pairIdx][1];
 
-  uint16_t ms = millis();
+  uint32_t ms = millis();
   uint8_t timeA = ms / 11;  // outward pulse phase
   uint8_t timeB = ms / 17;  // counter-pulse phase
   uint8_t timeHue = ms / 37; // slow color rotation
