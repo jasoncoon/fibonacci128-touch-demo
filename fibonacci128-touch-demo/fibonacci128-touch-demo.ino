@@ -96,14 +96,14 @@ SimplePatternList patterns = {
   sublimeRain,
   phyllotaxisBloomAnimation,
 
-  flock,
-  attract,
+  // flock,
+  // attract,
   incrementalDrift,
   incrementalDrift2,
   pendulumWave,
-  spiral,
-  swirl,  
-  electricMandala,
+  // spiral,
+  // swirl,  
+  // electricMandala,
 };
 
 uint8_t currentPatternIndex = 0;
